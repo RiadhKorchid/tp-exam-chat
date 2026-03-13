@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Chat en Temps Réel</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:ital,wght@0,300;0,500;0,600;1,300&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg: #0c0c14;
+      --surface: #13131f;
+      --surface2: #1c1c2e;
+      --border: #252538;
+      --accent: #7c6af7;
+      --accent2: #f76ac8;
+      --green: #4ade80;
+      --text: #e2e2f0;
+      --muted: #5a5a7a;
+      --radius: 12px;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px 16px 40px;
+      background-image:
+        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(124,106,247,0.12) 0%, transparent 60%);
+    }
+
+    /* ── HEADER ── */
+    header {
+      width: 100%;
+      max-width: 680px;
+      padding: 28px 0 20px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    header .title-block h1 {
+      font-family: 'Space Mono', monospace;
+      font-size: 1.35rem;
+      background: linear-gradient(100deg, var(--accent) 0%, var(--accent2) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: -0.5px;
+    }
+    header .title-block p {
+      color: var(--muted);
+      font-size: 0.78rem;
+      margin-top: 3px;
+      font-family: 'Space Mono', monospace;
+    }
+    .live-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(74, 222, 128, 0.08);
+      border: 1px solid rgba(74, 222, 128, 0.25);
+      border-radius: 20px;
+      padding: 5px 12px;
+      font-size: 0.72rem;
+      font-family: 'Space Mono', monospace;
+      color: var(--green);
+    }
+    .live-dot {
+      width: 7px; height: 7px;
+      background: var(--green);
+      border-radius: 50%;
+      animation: pulse 1.6s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.8); }
+    }
+
+    /* ── MAIN CONTAINER ── */
+    .container {
+      width: 100%;
+      max-width: 680px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    /* ── PSEUDO BAR ── */
+    .pseudo-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px 16px;
+    }
+    .pseudo-bar label {
+      font-size: 0.72rem;
+      color: var(--accent);
+      font-family: 'Space Mono', monospace;
+      white-space: nowrap;
+    }
+    .pseudo-bar input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: var(--text);
+      font-family: 'Space Mono', monospace;
+      font-size: 0.88rem;
+      outline: none;
+    }
+    .pseudo-bar input::placeholder { color: var(--muted); }
+
+    /* ── MESSAGES BOX ── */
+    #messages-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      height: 400px;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      scroll-behavior: smooth;
+    }
+    #messages-box::-webkit-scrollbar { width: 4px; }
+    #messages-box::-webkit-scrollbar-track { background: transparent; }
+    #messages-box::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    .empty-state {
+      margin: auto;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-family: 'Space Mono', monospace;
+    }
+
+    /* ── MESSAGE CARD ── */
+    .msg {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 11px 14px;
+      animation: slideIn 0.25s ease;
+      transition: border-color 0.2s;
+    }
+    .msg:hover { border-color: rgba(124,106,247,0.35); }
+    .msg.system {
+      background: rgba(74,222,128,0.04);
+      border-color: rgba(74,222,128,0.2);
+    }
+    .msg.system .msg-author { color: var(--green); }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .msg-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 5px;
+    }
+    .msg-author {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.73rem;
+      font-weight: 700;
+      color: var(--accent);
+    }
+    .msg-time {
+      font-size: 0.68rem;
+      color: var(--muted);
+      font-family: 'Space Mono', monospace;
+    }
+    .msg-content {
+      font-size: 0.93rem;
+      line-height: 1.55;
+      color: var(--text);
+      word-break: break-word;
+    }
+
+    /* ── SEND BAR ── */
+    .send-bar {
+      display: flex;
+      gap: 10px;
+    }
+    .send-bar input {
+      flex: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 12px 16px;
+      border-radius: var(--radius);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .send-bar input:focus { border-color: var(--accent); }
+    .send-bar input::placeholder { color: var(--muted); }
+
+    button {
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+      border: none;
+      color: #fff;
+      padding: 12px 24px;
+      border-radius: var(--radius);
+      font-family: 'Space Mono', monospace;
+      font-size: 0.82rem;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.15s;
+      white-space: nowrap;
+      letter-spacing: 0.3px;
+    }
+    button:hover { opacity: 0.88; transform: translateY(-1px); }
+    button:active { transform: translateY(0); opacity: 1; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    /* ── STATUS BAR ── */
+    .status-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.72rem;
+      color: var(--muted);
+      font-family: 'Space Mono', monospace;
+      padding: 0 2px;
+    }
+    .status-bar .ok { color: var(--green); }
+    .status-bar .err { color: #f87171; }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 480px) {
+      header { flex-direction: column; align-items: flex-start; }
+      .send-bar { flex-direction: column; }
+      button { width: 100%; }
+      #messages-box { height: 320px; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="title-block">
+      <h1>// chat.live</h1>
+      <p>DevOps Exam — Korchid Riadh  ( My CHAT )</p>
+    </div>
+    <div class="live-badge">
+      <div class="live-dot"></div>
+      LIVE
+    </div>
+  </header>
+
+  <div class="container">
+
+    <!-- Pseudo -->
+    <div class="pseudo-bar">
+      <label>pseudo://</label>
+      <input type="text" id="pseudo" placeholder="Votre pseudo..." maxlength="25" value=""/>
+    </div>
+
+    <!-- Messages -->
+    <div id="messages-box">
+      <div class="empty-state">Connexion au serveur...</div>
+    </div>
+
+    <!-- Send -->
+    <div class="send-bar">
+      <input type="text" id="msg-input" placeholder="Écrivez un message... (Entrée pour envoyer)" maxlength="400"/>
+      <button id="send-btn" onclick="sendMessage()">Envoyer →</button>
+    </div>
+
+    <!-- Status -->
+    <div class="status-bar">
+      <span id="conn-status">⟳ Connexion...</span>
+      <span>Refresh auto : toutes les 4s</span>
+    </div>
+
+  </div>
+
+  <script>
+    // ================================================================
+    // ⚠️  REMPLACE CETTE URL PAR TON URL RENDER APRÈS DÉPLOIEMENT
+    // ================================================================
+    const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+      ? 'http://localhost:3001'
+      : 'https://VOTRE-SERVICE.onrender.com'; // ← REMPLACER ICI
+    // ================================================================
+
+    let lastCount = 0;
+    let isConnected = false;
+
+    function escHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function formatTime(isoStr) {
+      return new Date(isoStr).toLocaleTimeString('fr-FR', {
+        hour: '2-digit', minute: '2-digit', second: '2-digit'
+      });
+    }
+
+    async function fetchMessages() {
+      try {
+        const res = await fetch(`${API_URL}/api/messages`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const msgs = await res.json();
+
+        const box = document.getElementById('messages-box');
+        const atBottom = box.scrollHeight - box.scrollTop <= box.clientHeight + 60;
+
+        if (msgs.length !== lastCount) {
+          box.innerHTML = '';
+          if (msgs.length === 0) {
+            box.innerHTML = '<div class="empty-state">Aucun message pour l\'instant.<br>Soyez le premier ! 💬</div>';
+          } else {
+            msgs.forEach(m => {
+              const div = document.createElement('div');
+              div.className = 'msg' + (m.author === 'System' ? ' system' : '');
+              div.innerHTML = `
+                <div class="msg-header">
+                  <span class="msg-author">${escHtml(m.author)}</span>
+                  <span class="msg-time">${formatTime(m.timestamp)}</span>
+                </div>
+                <div class="msg-content">${escHtml(m.content)}</div>
+              `;
+              box.appendChild(div);
+            });
+          }
+          lastCount = msgs.length;
+          if (atBottom) box.scrollTop = box.scrollHeight;
+        }
+
+        // Update status
+        isConnected = true;
+        document.getElementById('conn-status').innerHTML =
+          `<span class="ok">✓ Connecté</span> — ${msgs.length} message(s)`;
+
+      } catch (e) {
+        isConnected = false;
+        document.getElementById('conn-status').innerHTML =
+          `<span class="err">✗ Erreur: ${e.message}</span>`;
+      }
+    }
+
+    async function sendMessage() {
+      const authorEl = document.getElementById('pseudo');
+      const inputEl  = document.getElementById('msg-input');
+      const btn      = document.getElementById('send-btn');
+
+      const author  = authorEl.value.trim() || 'Anonyme';
+      const content = inputEl.value.trim();
+      if (!content) { inputEl.focus(); return; }
+
+      btn.disabled = true;
+      btn.textContent = '...';
+
+      try {
+        const res = await fetch(`${API_URL}/api/messages`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ author, content })
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        inputEl.value = '';
+        await fetchMessages();
+      } catch (e) {
+        alert('❌ Erreur d\'envoi : ' + e.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Envoyer →';
+        inputEl.focus();
+      }
+    }
+
+    // Enter key to send
+    document.getElementById('msg-input').addEventListener('keypress', e => {
+      if (e.key === 'Enter') sendMessage();
+    });
+
+    // Initial load + auto-refresh every 4s
+    fetchMessages();
+    setInterval(fetchMessages, 4000);
+  </script>
+
+</body>
+</html>
